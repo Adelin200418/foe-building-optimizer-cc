@@ -85,7 +85,14 @@
 
         .cell.building {
             background: #FFB366;
-            border: 1px solid #FF8C00;
+            border: 2px solid #333;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            font-weight: bold;
+            color: #333;
         }
 
         .building-form {
@@ -276,7 +283,15 @@
         let gridHeight = 20;
         let expansions = new Set();
         let buildings = [];
-        let placedBuildings = new Map();
+        let placedBuildings = new Map(); // Maps cell coordinates to building info
+        let buildingInstances = []; // Array of placed building objects with their positions
+
+        // Array of colors for different buildings
+        const buildingColors = [
+            '#FFB366', '#FF6B6B', '#4ECDC4', '#95E1D3', '#F38181',
+            '#AA96DA', '#FCBAD3', '#FFC93C', '#A8D8EA', '#FFD3B5',
+            '#FFAAA6', '#C7CEEA', '#B4E197', '#FFD93D', '#6BCF7F'
+        ];
 
         function createGrid() {
             gridWidth = parseInt(document.getElementById('gridWidth').value);
@@ -288,6 +303,7 @@
 
             expansions.clear();
             placedBuildings.clear();
+            buildingInstances = [];
 
             for (let y = 0; y < gridHeight; y++) {
                 for (let x = 0; x < gridWidth; x++) {
@@ -347,6 +363,7 @@
         function clearExpansions() {
             expansions.clear();
             placedBuildings.clear();
+            buildingInstances = [];
             renderGrid();
             updateStats();
         }
@@ -358,8 +375,18 @@
                 const y = parseInt(cell.dataset.y);
                 const key = `${x},${y}`;
 
+                cell.textContent = '';
+                cell.style.backgroundColor = '';
+
                 if (placedBuildings.has(key)) {
+                    const buildingInfo = placedBuildings.get(key);
                     cell.className = 'cell building';
+                    cell.style.backgroundColor = buildingInfo.color;
+
+                    // Only show label on the top-left cell of each building
+                    if (x === buildingInfo.x && y === buildingInfo.y) {
+                        cell.textContent = `${buildingInfo.width}x${buildingInfo.height}`;
+                    }
                 } else if (expansions.has(key)) {
                     cell.className = 'cell expansion';
                 } else {
@@ -421,6 +448,7 @@
 
             // Clear previous placements
             placedBuildings.clear();
+            buildingInstances = [];
 
             // Create a grid to track occupied spaces
             const occupied = new Set(expansions);
@@ -437,6 +465,7 @@
             buildingsToPlace.sort((a, b) => (b.width * b.height) - (a.width * a.height));
 
             let placedCount = 0;
+            let colorIndex = 0;
 
             // Try to place each building
             for (const building of buildingsToPlace) {
@@ -446,8 +475,10 @@
                 for (let y = 0; y < gridHeight && !placed; y++) {
                     for (let x = 0; x < gridWidth && !placed; x++) {
                         if (canPlaceBuilding(x, y, building.width, building.height, occupied)) {
-                            placeBuilding(x, y, building.width, building.height, occupied);
+                            const color = buildingColors[colorIndex % buildingColors.length];
+                            placeBuilding(x, y, building.width, building.height, color, occupied);
                             placedCount++;
+                            colorIndex++;
                             placed = true;
                         }
                     }
@@ -485,11 +516,22 @@
             return true;
         }
 
-        function placeBuilding(x, y, width, height, occupied) {
+        function placeBuilding(x, y, width, height, color, occupied) {
+            const buildingInfo = {
+                x: x,
+                y: y,
+                width: width,
+                height: height,
+                color: color
+            };
+
+            buildingInstances.push(buildingInfo);
+
+            // Mark all cells occupied by this building with the building info
             for (let dy = 0; dy < height; dy++) {
                 for (let dx = 0; dx < width; dx++) {
                     const key = `${x + dx},${y + dy}`;
-                    placedBuildings.set(key, true);
+                    placedBuildings.set(key, buildingInfo);
                 }
             }
         }
